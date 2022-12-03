@@ -1,0 +1,216 @@
+local MIR = RegisterMod("Mark Impossible Rooms", 1)
+local Log = Isaac.ConsoleOutput
+
+-- Please do not look at my code. It is embarrassing.
+
+MIR.ImpossibleRoomSpriteSmall = Sprite()
+MIR.ImpossibleRoomSpriteSmall:Load("gfx/ui/custom_minimap1.anm2", true)
+MIR.ImpossibleRoomSpriteLarge = Sprite()
+MIR.ImpossibleRoomSpriteLarge:Load("gfx/ui/custom_minimap2.anm2", true)
+
+if MinimapAPI then
+	MinimapAPI:AddRoomShape(
+		"ImpossibleRoom",
+		{
+			RoomUnvisited = {
+				sprite = MIR.ImpossibleRoomSpriteSmall,
+				anim = "gfx/ui/custom_minimap1.anm2",
+				frame = 0
+			},
+			RoomVisited = {
+				sprite = MIR.ImpossibleRoomSpriteSmall,
+				anim = "gfx/ui/custom_minimap1.anm2",
+				frame = 0
+			},
+			RoomCurrent = {
+				sprite = MIR.ImpossibleRoomSpriteSmall,
+				anim = "gfx/ui/custom_minimap1.anm2",
+				frame = 0
+			},
+			RoomSemivisited = {
+				sprite = MIR.ImpossibleRoomSpriteSmall,
+				anim = "gfx/ui/custom_minimap1.anm2",
+				frame = 0
+			}
+		},
+		{
+			RoomUnvisited = {
+				sprite = MIR.ImpossibleRoomSpriteLarge,
+				anim = "gfx/ui/custom_minimap2.anm2",
+				frame = 0
+			},
+			RoomVisited = {
+				sprite = MIR.ImpossibleRoomSpriteLarge,
+				anim = "gfx/ui/custom_minimap2.anm2",
+				frame = 0
+			},
+			RoomCurrent = {
+				sprite = MIR.ImpossibleRoomSpriteLarge,
+				anim = "gfx/ui/custom_minimap2.anm2",
+				frame = 0
+			},
+			RoomSemivisited = {
+				sprite = MIR.ImpossibleRoomSpriteLarge,
+				anim = "gfx/ui/custom_minimap2.anm2",
+				frame = 0
+			}
+		},
+		Vector(0, 0),
+		Vector(1, 1),
+		{Vector(0, 0)},
+		{Vector(0, 0)},
+		Vector(0, 0),
+		{Vector(0, 0)},
+		Vector(0, 0),
+		{Vector(-1, 0), Vector(0, -1), Vector(1, 0), Vector(0, 1)}
+	)
+end
+
+MIR.DoorTable = {
+	-- Lists location and doorslots of adjacent rooms depending on room shape
+	-- https://wofsauge.github.io/IsaacDocs/rep/enums/RoomShape.html
+
+	-- 1x1
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, nil, nil, nil, nil},
+	-- 1x1 horizontal corridor
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, nil, nil, nil, nil},
+	-- 1x1 vertical corridor
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, nil, nil, nil, nil},
+	-- 2x1 vertical
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1}, nil, {1, 1}, nil},
+	-- 2x1 vertical corridor
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1}, nil, {1, 1}, nil},
+	-- 2x1 horizontal
+	{{-1, 0}, {0, -1}, {2, 0}, {0, 1}, nil, {1, -1}, nil, {1, 1}},
+	-- 2x1 horizontal corridor
+	{{-1, 0}, {0, -1}, {2, 0}, {0, 1}, nil, {1, -1}, nil, {1, 1}},
+	-- 2x2
+	{{-1, 0}, {0, -1}, {2, 0}, {0, 2}, {-1, 1}, {1, -1}, {2, 1}, {1, 2}},
+	-- lower right L shape
+    {{-1, 0}, {-1, 0}, {1, 0}, {-1, 2}, {-2, 1}, {0, -1}, {1, 1}, {0, 2}},
+	-- lower left L shape
+    {{-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1}, {1, 0}, {2, 1}, {1, 2}},
+	-- upper right L shape
+	{{-1, 0}, {0, -1}, {2, 0}, {0, 1}, {0, 1}, {1, -1}, {2, 1}, {1, 2}},
+	-- upper left L shape
+	{{-1, 0}, {0, -1}, {2, 0}, {0, 2}, {-1, 1}, {1, -1}, {1, 1}, {1, 1}}
+}
+MIR.AddWhenOtherVisibleCache = {}
+MIR.LastFloorCacheCleared = null
+
+
+
+
+
+
+function MIR:MarkImpossibleRooms()
+	local stage = Game():GetLevel():GetStage()
+	local room = MinimapAPI:GetCurrentRoom()
+	local pos = room.Position -- vector
+	local shape = room.Shape
+	local doors = 255 - room.Descriptor.Data.Doors -- inverted bitmap of what entrances are valid
+	local neighbors = MIR:GetNeighbors(pos, shape)
+
+	-- POST_NEW_ROOM is called before POST_NEW_LEVEL, meaning this function executes before
+	-- the cache is cleared at the start of a floor
+	-- This is a workaround by checking manually instead of using a callback
+	if MIR.LastFloorCacheCleared ~= stage then
+		MIR.AddWhenOtherVisibleCache = {}
+		MIR.LastFloorCacheCleared = stage
+	end
+
+	--Log("\nShape: "..shape..", bitmap: "..doors..", coords: "..pos.X..", "..pos.Y.."\nNeighbors: ")
+	--for _,v in ipairs(neighbors) do Log("{"..v.X..", "..v.Y.."} ") end
+	--Log("\nChecking rooms...")
+
+	-- Get invalid entrances (impossible rooms)
+	if doors ~= 0 then
+		for n=7,0,-1 do
+			if doors >= 2^n then
+				local delta = MIR.DoorTable[shape][n+1]
+				if delta then
+					MIR:AddRoom(Vector(pos.X + delta[1], pos.Y + delta[2]))
+				end
+				doors = doors - 2^n
+			end
+		end
+	end
+
+	-- Loop through all adjacent rooms (neighbors)
+	for _,neighbor in ipairs(neighbors) do
+
+		-- Check the neighbor's neighbors (nNeighbors)
+		for _,nNeighbor in ipairs(MIR:GetNeighbors(neighbor, RoomShape.ROOMSHAPE_1x1)) do
+			local nNeighborRoom = MinimapAPI:GetRoomAtPosition(nNeighbor)
+			local makesImpossible = false
+			if nNeighborRoom then
+
+				makesImpossible = false
+				-- Does the neighbor's neighbor invalidate the neighbor itself?
+				-- boss room
+				if nNeighborRoom.Type == RoomType.ROOM_BOSS then
+					makesImpossible = true
+				-- vertical corridor
+				elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IV or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIV then
+					if nNeighbor.X == neighbor.X then
+						makesImpossible = true
+					end
+				-- horizontal corridor
+				elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IH or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIH then
+					if nNeighbor.Y == neighbor.Y then
+						makesImpossible = true
+					end
+				end
+
+				if makesImpossible and nNeighborRoom:IsIconVisible() then
+					MIR:AddRoom(neighbor)
+					break
+				elseif makesImpossible then
+					table.insert(MIR.AddWhenOtherVisibleCache, {neighbor, nNeighbor})
+				end
+
+			end
+		end
+
+		-- Check if the neighbor is outside the floor grid (13x13)
+		if neighbor.X < 0 or neighbor.Y < 0 or neighbor.X > 12 or neighbor.Y > 12 then
+			MIR:AddRoom(neighbor)
+		end
+
+	end
+
+	-- Add from AddWhenOtherVisibleCache
+	for _,pair in ipairs(MIR.AddWhenOtherVisibleCache) do
+		if MinimapAPI:GetRoomAtPosition(pair[2]):IsIconVisible() then
+			MIR:AddRoom(pair[1])
+		end
+	end
+
+	--Log("\nFinished checking rooms\n")
+end
+
+function MIR:GetNeighbors(pos, shape)
+	local neighbors = {}
+	for _,v in ipairs(MIR.DoorTable[shape]) do
+		if v then
+			neighbors.insert(Vector(pos.X + v[1], pos.Y + v[2]))
+		end
+	end
+	return neighbors
+end
+
+function MIR:AddRoom(pos)
+	if MinimapAPI:IsPositionFree(pos) and not Game():GetLevel():GetStateFlag(LevelStateFlag.STATE_MINESHAFT_ESCAPE) then
+		MinimapAPI:AddRoom({
+			ID = pos.X.."-"..pos.Y,
+			Position = pos,
+			Shape = "ImpossibleRoom",
+			Type = 1
+		})
+		--Log("\nAdded {"..pos.X..", "..pos.Y.."}")
+	end
+end
+
+if MinimapAPI then
+	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.MarkImpossibleRooms)
+end
