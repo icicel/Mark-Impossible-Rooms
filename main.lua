@@ -206,7 +206,10 @@ function MIR:GetNeighbors(pos, shape)
 end
 
 function MIR:AddRoom(pos)
-	if MinimapAPI:IsPositionFree(pos) and not Game():GetLevel():GetStateFlag(LevelStateFlag.STATE_MINESHAFT_ESCAPE) then
+	local level = Game():GetLevel()
+	if MinimapAPI:IsPositionFree(pos)
+	and not level:GetStateFlag(LevelStateFlag.STATE_MINESHAFT_ESCAPE)
+	and level:GetStage() ~= LevelStage.STAGE8 then
 		MinimapAPI:AddRoom({
 			ID = pos.X.."-"..pos.Y,
 			Position = pos,
@@ -214,7 +217,7 @@ function MIR:AddRoom(pos)
 			Type = 1,
 			DisplayFlags = 5
 		})
-		Log("\nAdded {"..pos.X..", "..pos.Y.."}")
+		--Log("\nAdded {"..pos.X..", "..pos.Y.."}")
 	end
 end
 
