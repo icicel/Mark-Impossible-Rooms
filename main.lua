@@ -1,13 +1,12 @@
 local MIR = RegisterMod("Mark Impossible Rooms", 1)
 local Log = Isaac.ConsoleOutput
 
--- Please do not look at my code. It is embarrassing.
-
+-- Adds the "impossible room" sprite.
+-- Actually doesn't work, in-game it's displayed as an empty texture, don't tell anyone!
 MIR.ImpossibleRoomSpriteSmall = Sprite()
 MIR.ImpossibleRoomSpriteSmall:Load("gfx/ui/custom_minimap1.anm2", true)
 MIR.ImpossibleRoomSpriteLarge = Sprite()
 MIR.ImpossibleRoomSpriteLarge:Load("gfx/ui/custom_minimap2.anm2", true)
-
 if MinimapAPI then
 	MinimapAPI:AddRoomShape(
 		"ImpossibleRoom",
@@ -119,8 +118,8 @@ function MIR:MarkImpossibleRooms()
 		MIR.LastFloorCacheCleared = stage
 	end
 
-	--Log("\nShape: "..shape..", bitmap: "..doors..", coords: "..pos.X..", "..pos.Y.."\nNeighbors: ")
-	--for _,v in ipairs(neighbors) do Log("{"..v.X..", "..v.Y.."} ") end
+	--Log("\nShape: "..shape..", bitmap: "..doors..", coords: "..pos.X..", "..pos.Y.."\nNeighbors:")
+	--for _,v in ipairs(neighbors) do Log(" {"..v.X..", "..v.Y.."}") end
 	--Log("\nChecking rooms...")
 
 	-- Get invalid entrances (impossible rooms)
@@ -136,8 +135,10 @@ function MIR:MarkImpossibleRooms()
 		end
 	end
 
+	MIR:AddFromCache()
+
 	-- Loop through all adjacent rooms (neighbors)
-	for _,neighbor in ipairs(neighbors) do
+	for _,neighbor in ipairs(neighbors) do if MinimapAPI:IsPositionFree(neighbor) then
 
 		-- Check the neighbor's neighbors (nNeighbors)
 		for _,nNeighbor in ipairs(MIR:GetNeighbors(neighbor, RoomShape.ROOMSHAPE_1x1)) do
@@ -167,6 +168,7 @@ function MIR:MarkImpossibleRooms()
 					break
 				elseif makesImpossible then
 					table.insert(MIR.AddWhenOtherVisibleCache, {neighbor, nNeighbor})
+					--Log("\nCached: {"..neighbor.X..", "..neighbor.Y.."}, {"..nNeighbor.X..", "..nNeighbor.Y.."}")
 				end
 
 			end
@@ -177,23 +179,27 @@ function MIR:MarkImpossibleRooms()
 			MIR:AddRoom(neighbor)
 		end
 
-	end
-
-	-- Add from AddWhenOtherVisibleCache
-	for _,pair in ipairs(MIR.AddWhenOtherVisibleCache) do
-		if MinimapAPI:GetRoomAtPosition(pair[2]):IsIconVisible() then
-			MIR:AddRoom(pair[1])
-		end
-	end
+	end end
 
 	--Log("\nFinished checking rooms\n")
 end
 
+-- Called when entering a room AND when clearing a room (because otherwise it sometimes doesn't work)
+function MIR:AddFromCache()
+	for _,pair in ipairs(MIR.AddWhenOtherVisibleCache) do
+		--Log("\nChecking cached: {"..pair[1].X..", "..pair[1].Y.."}, {"..pair[2].X..", "..pair[2].Y.."}")
+		if MinimapAPI:GetRoomAtPosition(pair[2]):IsIconVisible() then
+			MIR:AddRoom(pair[1])
+		end
+	end
+end
+
+-- MinimapAPI already has GetAdjacentRooms(), but this returns coordinate vectors instead of room objects
 function MIR:GetNeighbors(pos, shape)
 	local neighbors = {}
 	for _,v in ipairs(MIR.DoorTable[shape]) do
 		if v then
-			neighbors.insert(Vector(pos.X + v[1], pos.Y + v[2]))
+			table.insert(neighbors, Vector(pos.X + v[1], pos.Y + v[2]))
 		end
 	end
 	return neighbors
@@ -205,12 +211,14 @@ function MIR:AddRoom(pos)
 			ID = pos.X.."-"..pos.Y,
 			Position = pos,
 			Shape = "ImpossibleRoom",
-			Type = 1
+			Type = 1,
+			DisplayFlags = 5
 		})
-		--Log("\nAdded {"..pos.X..", "..pos.Y.."}")
+		Log("\nAdded {"..pos.X..", "..pos.Y.."}")
 	end
 end
 
 if MinimapAPI then
 	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.MarkImpossibleRooms)
+	MIR:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, MIR.AddFromCache)
 end
