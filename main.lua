@@ -138,41 +138,41 @@ function MIR:MarkImpossibleRooms()
 	MIR:AddFromCache()
 
 	-- Loop through all adjacent rooms (neighbors)
-	for _,neighbor in ipairs(neighbors) do if MinimapAPI:IsPositionFree(neighbor) then
+	for _,neighbor in ipairs(neighbors) do 
+	if MinimapAPI:IsPositionFree(neighbor) then
 
 		-- Check the neighbor's neighbors (nNeighbors)
 		for _,nNeighbor in ipairs(MIR:GetNeighbors(neighbor, RoomShape.ROOMSHAPE_1x1)) do
-			local nNeighborRoom = MinimapAPI:GetRoomAtPosition(nNeighbor)
+		local nNeighborRoom = MinimapAPI:GetRoomAtPosition(nNeighbor)
+		if nNeighborRoom then
+
 			local impossible = false
-			if nNeighborRoom then
-
-				impossible = false
-				-- Does the neighbor's neighbor invalidate the neighbor itself?
-				-- boss room
-				if nNeighborRoom.Type == RoomType.ROOM_BOSS then
+			-- Does the neighbor's neighbor invalidate the neighbor itself?
+			-- boss room
+			if nNeighborRoom.Type == RoomType.ROOM_BOSS then
+				impossible = true
+			-- vertical corridor
+			elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IV or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIV then
+				if nNeighbor.X == neighbor.X then
 					impossible = true
-				-- vertical corridor
-				elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IV or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIV then
-					if nNeighbor.X == neighbor.X then
-						impossible = true
-					end
-				-- horizontal corridor
-				elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IH or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIH then
-					if nNeighbor.Y == neighbor.Y then
-						impossible = true
-					end
 				end
-
-				if impossible then
-					if nNeighborRoom:IsIconVisible() then
-						MIR:AddRoom(neighbor)
-					else
-						MIR:Log("\nCached: {"..neighbor.X..", "..neighbor.Y.."}, {"..nNeighbor.X..", "..nNeighbor.Y.."}")
-						table.insert(MIR.AddWhenOtherVisibleCache, {neighbor, nNeighbor})
-					end
+			-- horizontal corridor
+			elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IH or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIH then
+				if nNeighbor.Y == neighbor.Y then
+					impossible = true
 				end
-
 			end
+
+			if impossible then
+				if nNeighborRoom:IsIconVisible() then
+					MIR:AddRoom(neighbor)
+				else
+					MIR:Log("\nCached: {"..neighbor.X..", "..neighbor.Y.."}, {"..nNeighbor.X..", "..nNeighbor.Y.."}")
+					table.insert(MIR.AddWhenOtherVisibleCache, {neighbor, nNeighbor})
+				end
+			end
+
+		end
 		end
 
 		-- Check if the neighbor is outside the floor grid (13x13)
@@ -180,7 +180,8 @@ function MIR:MarkImpossibleRooms()
 			MIR:AddRoom(neighbor)
 		end
 
-	end end
+	end
+	end
 
 	MIR:Log("\nFinished checking rooms\n")
 end
