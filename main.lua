@@ -208,17 +208,23 @@ function MIR:GetNeighbors(pos, shape)
 end
 
 function MIR:AddRoom(pos)
-	local level = Game():GetLevel()
-	if MinimapAPI:IsPositionFree(pos) and level:GetStage() ~= LevelStage.STAGE8 then
-		MinimapAPI:AddRoom({
-			ID = pos.X.."-"..pos.Y,
-			Position = pos,
-			Shape = "ImpossibleRoom",
-			Type = 1,
-			DisplayFlags = 5
-		})
-		MIR:Log("\nAdded {"..pos.X..", "..pos.Y.."}")
+	local stage = Game():GetLevel():GetStage()
+	local room = Game():GetRoom()
+
+	if not MinimapAPI:IsPositionFree(pos)
+	or (stage == LevelStage.STAGE2_2 and room:IsMirrorWorld()) -- knife piece 2
+	or stage == LevelStage.STAGE8 then -- home
+		return
 	end
+
+	MinimapAPI:AddRoom({
+		ID = pos.X.."-"..pos.Y,
+		Position = pos,
+		Shape = "ImpossibleRoom",
+		Type = 1,
+		DisplayFlags = 5
+	})
+	MIR:Log("\nAdded {"..pos.X..", "..pos.Y.."}")
 end
 
 if MinimapAPI then
