@@ -212,7 +212,7 @@ function MIR:AddRoom(pos)
 	local room = Game():GetRoom()
 
 	if not MinimapAPI:IsPositionFree(pos)
-	or (stage == LevelStage.STAGE2_2 and room:IsMirrorWorld()) -- knife piece 2
+	or (stage == LevelStage.STAGE2_2 and MinimapAPI.CurrentDimension == 1) -- knife piece 2
 	or stage == LevelStage.STAGE8 then -- home
 		return
 	end
