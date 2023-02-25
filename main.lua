@@ -222,7 +222,13 @@ function MIR:AddRoom(pos)
 		Position = pos,
 		Shape = "ImpossibleRoom",
 		Type = 1,
-		DisplayFlags = 5
+		DisplayFlags = 5,
+		Descriptor = {
+			Data = {
+				Doors = 0
+			},
+			DisplayFlags = 5,
+		}
 	})
 	MIR:Log("\nAdded {"..pos.X..", "..pos.Y.."}")
 end
