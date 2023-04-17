@@ -104,8 +104,7 @@ MIR.DoorTable = {
 
 
 
-function MIR:CheckAdjacentRooms()
-	local stage = Game():GetLevel():GetStage()
+function MIR:CheckDoorSlots()
 	local room = MinimapAPI:GetCurrentRoom()
 	local pos = room.Position -- vector
 	local shape = room.Shape
@@ -127,7 +126,7 @@ function MIR:CheckAdjacentRooms()
 		end
 	end
 
-	-- Loop through all adjacent rooms (neighbors)
+	-- Loop through all adjacent room vectors
 	for _,neighborPos in ipairs(neighborPos_s) do
 		-- Check if the neighbor is outside the floor grid (13x13)
 		if neighborPos.X < 0 or neighborPos.Y < 0 or neighborPos.X > 12 or neighborPos.Y > 12 then
@@ -142,17 +141,11 @@ function MIR:CheckAllRooms()
 	for _,room in ipairs(MinimapAPI:GetLevel()) do
 		local stage = Game():GetLevel():GetStage()
 
-		-- boss room (only checked if compass+treasure map)
-		-- is straight up disabled in void because wacky behavior with delirium's boss room
+		-- boss room
+		-- is straight up disabled in void (for now) because wacky behavior with delirium's boss room
 		if room.Type == RoomType.ROOM_BOSS and room:IsIconVisible() and stage ~= LevelStage.STAGE7 then
-			if stage == LevelStage.STAGE7 then
-				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, RoomShape.ROOMSHAPE_1x1)) do
-					MIR:AddImpossibleRoom(neighborPos)
-				end
-			else
-				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
-					MIR:AddImpossibleRoom(neighborPos)
-				end
+			for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
+				MIR:AddImpossibleRoom(neighborPos)
 			end
 		elseif room:IsVisible() then
 			-- vertical corridor
@@ -212,6 +205,6 @@ function MIR:AddImpossibleRoom(pos)
 end
 
 if MinimapAPI then
-	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.CheckAdjacentRooms)
+	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.CheckDoorSlots)
 	MIR:AddCallback(ModCallbacks.MC_POST_UPDATE, MIR.CheckAllRooms)
 end
