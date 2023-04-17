@@ -152,12 +152,12 @@ function MIR:CheckAdjacentRooms()
 			if nNeighbor.Type == RoomType.ROOM_BOSS then
 				impossible = true
 			-- vertical corridor
-			elseif nNeighbor.Type == RoomType.ROOMSHAPE_IV or nNeighbor.Type == RoomType.ROOMSHAPE_IIV then
+			elseif nNeighbor.Shape == RoomShape.ROOMSHAPE_IV or nNeighbor.Shape == RoomShape.ROOMSHAPE_IIV then
 				if nNeighborPos.X == neighborPos.X then
 					impossible = true
 				end
 			-- horizontal corridor
-			elseif nNeighbor.Type == RoomType.ROOMSHAPE_IH or nNeighbor.Type == RoomType.ROOMSHAPE_IIH then
+			elseif nNeighbor.Shape == RoomShape.ROOMSHAPE_IH or nNeighbor.Shape == RoomShape.ROOMSHAPE_IIH then
 				if nNeighborPos.Y == neighborPos.Y then
 					impossible = true
 				end
