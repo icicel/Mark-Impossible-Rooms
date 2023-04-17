@@ -105,13 +105,13 @@ MIR.LastFloorCacheCleared = nil
 
 
 
-function MIR:MarkImpossibleRooms()
+function MIR:CheckAdjacentRooms()
 	local stage = Game():GetLevel():GetStage()
 	local room = MinimapAPI:GetCurrentRoom()
 	local pos = room.Position -- vector
 	local shape = room.Shape
 	local validDoors = room.Descriptor.Data.Doors -- bitmap of what entrances are valid
-	local neighbors = MIR:GetNeighbors(pos, shape)
+	local neighborPos_s = MIR:GetNeighborVectors(pos, shape)
 
 	-- POST_NEW_ROOM is called before POST_NEW_LEVEL, meaning this function executes before
 	-- the cache is cleared at the start of a floor
@@ -122,7 +122,7 @@ function MIR:MarkImpossibleRooms()
 	end
 
 	MIR:Log("\nShape: "..shape..", bitmap: "..validDoors..", coords: "..pos.X..", "..pos.Y.."\nNeighbors:")
-	for _,v in ipairs(neighbors) do MIR:Log(" {"..v.X..", "..v.Y.."}") end
+	for _,v in ipairs(neighborPos_s) do MIR:Log(" {"..v.X..", "..v.Y.."}") end
 	MIR:Log("\nChecking rooms...")
 
 	-- Get invalid entrances to neighboring rooms
@@ -138,37 +138,37 @@ function MIR:MarkImpossibleRooms()
 	MIR:AddFromCache()
 
 	-- Loop through all adjacent rooms (neighbors)
-	for _,neighbor in ipairs(neighbors) do 
-	if MinimapAPI:IsPositionFree(neighbor) then
+	for _,neighborPos in ipairs(neighborPos_s) do
+	if MinimapAPI:IsPositionFree(neighborPos) then
 
 		-- Check the neighbor's neighbors (nNeighbors)
-		for _,nNeighbor in ipairs(MIR:GetNeighbors(neighbor, RoomShape.ROOMSHAPE_1x1)) do
-		local nNeighborRoom = MinimapAPI:GetRoomAtPosition(nNeighbor)
-		if nNeighborRoom then
+		for _,nNeighborPos in ipairs(MIR:GetNeighborVectors(neighborPos, RoomShape.ROOMSHAPE_1x1)) do
+		local nNeighbor = MinimapAPI:GetRoomAtPosition(nNeighborPos)
+		if nNeighbor then
 
 			local impossible = false
 			-- Does the neighbor's neighbor invalidate the neighbor itself?
 			-- boss room
-			if nNeighborRoom.Type == RoomType.ROOM_BOSS then
+			if nNeighbor.Type == RoomType.ROOM_BOSS then
 				impossible = true
 			-- vertical corridor
-			elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IV or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIV then
-				if nNeighbor.X == neighbor.X then
+			elseif nNeighbor.Type == RoomType.ROOMSHAPE_IV or nNeighbor.Type == RoomType.ROOMSHAPE_IIV then
+				if nNeighborPos.X == neighborPos.X then
 					impossible = true
 				end
 			-- horizontal corridor
-			elseif nNeighborRoom.Type == RoomType.ROOMSHAPE_IH or nNeighborRoom.Type == RoomType.ROOMSHAPE_IIH then
-				if nNeighbor.Y == neighbor.Y then
+			elseif nNeighbor.Type == RoomType.ROOMSHAPE_IH or nNeighbor.Type == RoomType.ROOMSHAPE_IIH then
+				if nNeighborPos.Y == neighborPos.Y then
 					impossible = true
 				end
 			end
 
 			if impossible then
-				if nNeighborRoom:IsIconVisible() then
-					MIR:AddRoom(neighbor)
+				if nNeighbor:IsIconVisible() then
+					MIR:AddRoom(neighborPos)
 				else
-					MIR:Log("\nCached: {"..neighbor.X..", "..neighbor.Y.."}, {"..nNeighbor.X..", "..nNeighbor.Y.."}")
-					table.insert(MIR.AddWhenOtherVisibleCache, {neighbor, nNeighbor})
+					MIR:Log("\nCached: {"..neighborPos.X..", "..neighborPos.Y.."}, {"..nNeighborPos.X..", "..nNeighborPos.Y.."}")
+					table.insert(MIR.AddWhenOtherVisibleCache, {neighborPos, nNeighborPos})
 				end
 			end
 
@@ -176,8 +176,8 @@ function MIR:MarkImpossibleRooms()
 		end
 
 		-- Check if the neighbor is outside the floor grid (13x13)
-		if neighbor.X < 0 or neighbor.Y < 0 or neighbor.X > 12 or neighbor.Y > 12 then
-			MIR:AddRoom(neighbor)
+		if neighborPos.X < 0 or neighborPos.Y < 0 or neighborPos.X > 12 or neighborPos.Y > 12 then
+			MIR:AddRoom(neighborPos)
 		end
 
 	end
@@ -197,7 +197,7 @@ function MIR:AddFromCache()
 end
 
 -- MinimapAPI already has GetAdjacentRooms(), but this returns coordinate vectors instead of room objects
-function MIR:GetNeighbors(pos, shape)
+function MIR:GetNeighborVectors(pos, shape)
 	local neighbors = {}
 	for _,v in ipairs(MIR.DoorTable[shape]) do
 		if v then
@@ -234,6 +234,6 @@ function MIR:AddRoom(pos)
 end
 
 if MinimapAPI then
-	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.MarkImpossibleRooms)
+	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.CheckAdjacentRooms)
 	MIR:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, MIR.AddFromCache)
 end
