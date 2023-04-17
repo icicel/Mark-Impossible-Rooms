@@ -98,8 +98,6 @@ MIR.DoorTable = {
 	-- upper left L shape
 	{{-1, 0}, {0, -1}, {2, 0}, {0, 2}, {-1, 1}, {1, -1}, {1, 1}, {1, 1}}
 }
-MIR.AddWhenOtherVisibleCache = {}
-MIR.LastFloorCacheCleared = nil
 
 
 
@@ -114,14 +112,6 @@ function MIR:CheckAdjacentRooms()
 	local validDoors = room.Descriptor.Data.Doors -- bitmap of what entrances are valid
 	local neighborPos_s = MIR:GetNeighborVectors(pos, shape)
 
-	-- POST_NEW_ROOM is called before POST_NEW_LEVEL, meaning this function executes before
-	-- the cache is cleared at the start of a floor
-	-- This is a workaround by checking manually instead of using a callback
-	if MIR.LastFloorCacheCleared ~= stage then
-		MIR.AddWhenOtherVisibleCache = {}
-		MIR.LastFloorCacheCleared = stage
-	end
-
 	MIR:Log("\nShape: "..shape..", bitmap: "..validDoors..", coords: "..pos.X..", "..pos.Y.."\nNeighbors:")
 	for _,v in ipairs(neighborPos_s) do MIR:Log(" {"..v.X..", "..v.Y.."}") end
 	MIR:Log("\nChecking rooms...")
@@ -131,69 +121,57 @@ function MIR:CheckAdjacentRooms()
 		if validDoors & 1 << n == 0 then
 			local delta = MIR.DoorTable[shape][n+1]
 			if delta ~= "nil" then
-				MIR:AddImpossibleRoom(Vector(pos.X + delta[1], pos.Y + delta[2]))
+				local invalidPos = Vector(pos.X + delta[1], pos.Y + delta[2])
+				MIR:AddImpossibleRoom(invalidPos)
 			end
 		end
 	end
 
-	MIR:AddFromCache()
-
 	-- Loop through all adjacent rooms (neighbors)
 	for _,neighborPos in ipairs(neighborPos_s) do
-	if MinimapAPI:IsPositionFree(neighborPos) then
-
-		-- Check the neighbor's neighbors (nNeighbors)
-		for _,nNeighborPos in ipairs(MIR:GetNeighborVectors(neighborPos, RoomShape.ROOMSHAPE_1x1)) do
-		local nNeighbor = MinimapAPI:GetRoomAtPosition(nNeighborPos)
-		if nNeighbor then
-
-			local impossible = false
-			-- Does the neighbor's neighbor invalidate the neighbor itself?
-			-- boss room
-			if nNeighbor.Type == RoomType.ROOM_BOSS then
-				impossible = true
-			-- vertical corridor
-			elseif nNeighbor.Shape == RoomShape.ROOMSHAPE_IV or nNeighbor.Shape == RoomShape.ROOMSHAPE_IIV then
-				if nNeighborPos.X == neighborPos.X then
-					impossible = true
-				end
-			-- horizontal corridor
-			elseif nNeighbor.Shape == RoomShape.ROOMSHAPE_IH or nNeighbor.Shape == RoomShape.ROOMSHAPE_IIH then
-				if nNeighborPos.Y == neighborPos.Y then
-					impossible = true
-				end
-			end
-
-			if impossible then
-				if nNeighbor:IsIconVisible() then
-					MIR:AddImpossibleRoom(neighborPos)
-				else
-					MIR:Log("\nCached: {"..neighborPos.X..", "..neighborPos.Y.."}, {"..nNeighborPos.X..", "..nNeighborPos.Y.."}")
-					table.insert(MIR.AddWhenOtherVisibleCache, {neighborPos, nNeighborPos})
-				end
-			end
-
-		end
-		end
-
 		-- Check if the neighbor is outside the floor grid (13x13)
 		if neighborPos.X < 0 or neighborPos.Y < 0 or neighborPos.X > 12 or neighborPos.Y > 12 then
 			MIR:AddImpossibleRoom(neighborPos)
 		end
-
-	end
 	end
 
 	MIR:Log("\nFinished checking rooms\n")
 end
 
--- Called when entering a room AND when clearing a room (because otherwise it sometimes doesn't work)
-function MIR:AddFromCache()
-	for _,pair in ipairs(MIR.AddWhenOtherVisibleCache) do
-		MIR:Log("\nChecking cached: {"..pair[1].X..", "..pair[1].Y.."}, {"..pair[2].X..", "..pair[2].Y.."}")
-		if MinimapAPI:GetRoomAtPosition(pair[2]):IsIconVisible() then
-			MIR:AddImpossibleRoom(pair[1])
+function MIR:CheckAllRooms()
+	for _,room in ipairs(MinimapAPI:GetLevel()) do
+		local stage = Game():GetLevel():GetStage()
+
+		-- boss room (only checked if compass+treasure map)
+		-- is straight up disabled in void because wacky behavior with delirium's boss room
+		if room.Type == RoomType.ROOM_BOSS and room:IsIconVisible() and stage ~= LevelStage.STAGE7 then
+			if stage == LevelStage.STAGE7 then
+				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, RoomShape.ROOMSHAPE_1x1)) do
+					MIR:AddImpossibleRoom(neighborPos)
+				end
+			else
+				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
+					MIR:AddImpossibleRoom(neighborPos)
+				end
+			end
+		elseif room:IsVisible() then
+			-- vertical corridor
+			if room.Shape == RoomShape.ROOMSHAPE_IV or room.Shape == RoomShape.ROOMSHAPE_IIV then
+				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
+					if neighborPos.X ~= room.Position.X then
+						MIR:AddImpossibleRoom(neighborPos)
+					end
+				end
+			-- horizontal corridor
+			elseif room.Shape == RoomShape.ROOMSHAPE_IH or room.Shape == RoomShape.ROOMSHAPE_IIH then
+				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
+					if neighborPos.Y ~= room.Position.Y then
+						MIR:AddImpossibleRoom(neighborPos)
+					end
+				end
+			end
 		end
+
 	end
 end
 
@@ -233,45 +211,7 @@ function MIR:AddImpossibleRoom(pos)
 	MIR:Log("\nAdded {"..pos.X..", "..pos.Y.."}")
 end
 
-function MIR:CheckForMapEffects()
-	local level = Game():GetLevel()
-	local hasTreasureMapEffect = true
-	local hasFullMapEffect = true
-	if not level:GetStateFlag(LevelStateFlag.STATE_FULL_MAP_EFFECT) then
-		hasTreasureMapEffect = level:GetStateFlag(LevelStateFlag.STATE_MAP_EFFECT)
-		hasFullMapEffect = hasTreasureMapEffect and level:GetStateFlag(LevelStateFlag.STATE_COMPASS_EFFECT)
-	end
-
-	if hasTreasureMapEffect then
-		for _,room in ipairs(MinimapAPI:GetLevel()) do
-
-			-- boss room (only checked if compass+treasure map)
-			if room.Type == RoomType.ROOM_BOSS and hasFullMapEffect then
-				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
-					MIR:AddImpossibleRoom(neighborPos)
-				end
-			-- vertical corridor
-			elseif room.Shape == RoomShape.ROOMSHAPE_IV or room.Shape == RoomShape.ROOMSHAPE_IIV then
-				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
-					if neighborPos.X ~= room.X then
-						MIR:AddImpossibleRoom(neighborPos)
-					end
-				end
-			-- horizontal corridor
-			elseif room.Shape == RoomShape.ROOMSHAPE_IH or room.Shape == RoomShape.ROOMSHAPE_IIH then
-				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
-					if neighborPos.Y ~= room.Y then
-						MIR:AddImpossibleRoom(neighborPos)
-					end
-				end
-			end
-
-		end
-	end
-end
-
 if MinimapAPI then
 	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.CheckAdjacentRooms)
-	MIR:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, MIR.AddFromCache)
-	MIR:AddCallback(ModCallbacks.MC_POST_UPDATE, MIR.CheckForMapEffects)
+	MIR:AddCallback(ModCallbacks.MC_POST_UPDATE, MIR.CheckAllRooms)
 end
