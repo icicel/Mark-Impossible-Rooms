@@ -61,10 +61,11 @@ if MinimapAPI then
 		Vector(1, 1),
 		{Vector(0, 0)},
 		{Vector(0, 0)},
-		Vector(0, 0),
-		{Vector(0, 0)},
-		Vector(0, 0),
-		{Vector(-1, 0), Vector(0, -1), Vector(1, 0), Vector(0, 1)}
+		Vector(0.25,0.25),
+		{Vector(0.25,0.25)},
+		Vector(0.25,0.25),
+		{Vector(-1, 0), Vector(0, -1), Vector(1, 0), Vector(0, 1)},
+		{}
 	)
 end
 
