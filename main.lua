@@ -200,9 +200,9 @@ end
 -- MinimapAPI already has GetAdjacentRooms(), but this returns coordinate vectors instead of room objects
 function MIR:GetNeighborVectors(pos, shape)
 	local neighbors = {}
-	for _,v in ipairs(MIR.DoorTable[shape]) do
+	for i,v in ipairs(MIR.DoorTable[shape]) do
 		if v then
-			table.insert(neighbors, Vector(pos.X + v[1], pos.Y + v[2]))
+			table.insert(neighbors, i, Vector(pos.X + v[1], pos.Y + v[2]))
 		end
 	end
 	return neighbors
@@ -247,19 +247,19 @@ function MIR:CheckForMapEffects()
 
 			-- boss room (only checked if compass+treasure map)
 			if room.Type == RoomType.ROOM_BOSS and hasFullMapEffect then
-				for neighborPos in MIR:GetNeighborVectors(room.Position, room.Shape) do
+				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
 					MIR:AddImpossibleRoom(neighborPos)
 				end
 			-- vertical corridor
 			elseif room.Shape == RoomShape.ROOMSHAPE_IV or room.Shape == RoomShape.ROOMSHAPE_IIV then
-				for neighborPos in MIR:GetNeighborVectors(room.Position, room.Shape) do
+				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
 					if neighborPos.X ~= room.X then
 						MIR:AddImpossibleRoom(neighborPos)
 					end
 				end
 			-- horizontal corridor
 			elseif room.Shape == RoomShape.ROOMSHAPE_IH or room.Shape == RoomShape.ROOMSHAPE_IIH then
-				for neighborPos in MIR:GetNeighborVectors(room.Position, room.Shape) do
+				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
 					if neighborPos.Y ~= room.Y then
 						MIR:AddImpossibleRoom(neighborPos)
 					end
