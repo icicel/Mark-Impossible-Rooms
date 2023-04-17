@@ -74,19 +74,19 @@ MIR.DoorTable = {
 	-- https://wofsauge.github.io/IsaacDocs/rep/enums/RoomShape.html
 
 	-- 1x1
-	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, nil, nil, nil, nil},
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, "nil", "nil", "nil", "nil"},
 	-- 1x1 horizontal corridor
-	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, nil, nil, nil, nil},
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, "nil", "nil", "nil", "nil"},
 	-- 1x1 vertical corridor
-	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, nil, nil, nil, nil},
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 1}, "nil", "nil", "nil", "nil"},
 	-- 2x1 vertical
-	{{-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1}, nil, {1, 1}, nil},
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1}, "nil", {1, 1}, "nil"},
 	-- 2x1 vertical corridor
-	{{-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1}, nil, {1, 1}, nil},
+	{{-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1}, "nil", {1, 1}, "nil"},
 	-- 2x1 horizontal
-	{{-1, 0}, {0, -1}, {2, 0}, {0, 1}, nil, {1, -1}, nil, {1, 1}},
+	{{-1, 0}, {0, -1}, {2, 0}, {0, 1}, "nil", {1, -1}, "nil", {1, 1}},
 	-- 2x1 horizontal corridor
-	{{-1, 0}, {0, -1}, {2, 0}, {0, 1}, nil, {1, -1}, nil, {1, 1}},
+	{{-1, 0}, {0, -1}, {2, 0}, {0, 1}, "nil", {1, -1}, "nil", {1, 1}},
 	-- 2x2
 	{{-1, 0}, {0, -1}, {2, 0}, {0, 2}, {-1, 1}, {1, -1}, {2, 1}, {1, 2}},
 	-- lower right L shape
@@ -130,7 +130,7 @@ function MIR:CheckAdjacentRooms()
 	for n=0,7 do
 		if validDoors & 1 << n == 0 then
 			local delta = MIR.DoorTable[shape][n+1]
-			if delta then
+			if delta ~= "nil" then
 				MIR:AddImpossibleRoom(Vector(pos.X + delta[1], pos.Y + delta[2]))
 			end
 		end
@@ -200,9 +200,9 @@ end
 -- MinimapAPI already has GetAdjacentRooms(), but this returns coordinate vectors instead of room objects
 function MIR:GetNeighborVectors(pos, shape)
 	local neighbors = {}
-	for i,v in ipairs(MIR.DoorTable[shape]) do
-		if v then
-			table.insert(neighbors, i, Vector(pos.X + v[1], pos.Y + v[2]))
+	for _,v in ipairs(MIR.DoorTable[shape]) do
+		if v ~= "nil" then
+			table.insert(neighbors, Vector(pos.X + v[1], pos.Y + v[2]))
 		end
 	end
 	return neighbors
