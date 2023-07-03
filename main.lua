@@ -5,67 +5,44 @@ function MIR:Log(msg)
 end
 
 -- Adds the "impossible room" sprite.
--- Actually doesn't work, in-game it's displayed as an empty texture, don't tell anyone!
 MIR.ImpossibleRoomSpriteSmall = Sprite()
-MIR.ImpossibleRoomSpriteSmall:Load("gfx/ui/custom_minimap1.anm2", true)
+MIR.ImpossibleRoomSpriteSmall:Load("gfx/ui/impossible_small.anm2", true)
 MIR.ImpossibleRoomSpriteLarge = Sprite()
-MIR.ImpossibleRoomSpriteLarge:Load("gfx/ui/custom_minimap2.anm2", true)
+MIR.ImpossibleRoomSpriteLarge:Load("gfx/ui/impossible_large.anm2", true)
+MIR.ImpossibleRoomAnimationSmall = {
+	sprite = MIR.ImpossibleRoomSpriteSmall,
+	anim = "Default",
+	frame = 0
+}
+MIR.ImpossibleRoomAnimationLarge = {
+	sprite = MIR.ImpossibleRoomSpriteLarge,
+	anim = "Default",
+	frame = 0
+}
+
 if MinimapAPI then
 	MinimapAPI:AddRoomShape(
 		"ImpossibleRoom",
 		{
-			RoomUnvisited = {
-				sprite = MIR.ImpossibleRoomSpriteSmall,
-				anim = "gfx/ui/custom_minimap1.anm2",
-				frame = 0
-			},
-			RoomVisited = {
-				sprite = MIR.ImpossibleRoomSpriteSmall,
-				anim = "gfx/ui/custom_minimap1.anm2",
-				frame = 0
-			},
-			RoomCurrent = {
-				sprite = MIR.ImpossibleRoomSpriteSmall,
-				anim = "gfx/ui/custom_minimap1.anm2",
-				frame = 0
-			},
-			RoomSemivisited = {
-				sprite = MIR.ImpossibleRoomSpriteSmall,
-				anim = "gfx/ui/custom_minimap1.anm2",
-				frame = 0
-			}
+			RoomUnvisited = MIR.ImpossibleRoomAnimationSmall,
+			RoomVisited = MIR.ImpossibleRoomAnimationSmall,
+			RoomCurrent = MIR.ImpossibleRoomAnimationSmall,
+			RoomSemivisited = MIR.ImpossibleRoomAnimationSmall
 		},
 		{
-			RoomUnvisited = {
-				sprite = MIR.ImpossibleRoomSpriteLarge,
-				anim = "gfx/ui/custom_minimap2.anm2",
-				frame = 0
-			},
-			RoomVisited = {
-				sprite = MIR.ImpossibleRoomSpriteLarge,
-				anim = "gfx/ui/custom_minimap2.anm2",
-				frame = 0
-			},
-			RoomCurrent = {
-				sprite = MIR.ImpossibleRoomSpriteLarge,
-				anim = "gfx/ui/custom_minimap2.anm2",
-				frame = 0
-			},
-			RoomSemivisited = {
-				sprite = MIR.ImpossibleRoomSpriteLarge,
-				anim = "gfx/ui/custom_minimap2.anm2",
-				frame = 0
-			}
+			RoomUnvisited = MIR.ImpossibleRoomAnimationLarge,
+			RoomVisited = MIR.ImpossibleRoomAnimationLarge,
+			RoomCurrent = MIR.ImpossibleRoomAnimationLarge,
+			RoomSemivisited = MIR.ImpossibleRoomAnimationLarge
 		},
 		Vector(0, 0),
 		Vector(1, 1),
 		{Vector(0, 0)},
 		{Vector(0, 0)},
-		Vector(0.25,0.25),
-		{Vector(0.25,0.25)},
-		Vector(0.25,0.25),
-		{Vector(-1, 0), Vector(0, -1), Vector(1, 0), Vector(0, 1)},
-		{}
+		Vector(0, 0),
+		{Vector(0.25, 0.25)},
+		Vector(0.25, 0.25),
+		{Vector(-1, 0), Vector(0, -1), Vector(1, 0), Vector(0, 1)}
 	)
 end
 
