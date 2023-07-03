@@ -70,7 +70,7 @@ if MinimapAPI then
 end
 
 MIR.DoorTable = {
-	-- Lists location and doorslots of adjacent rooms depending on room shape
+	-- Lists location of adjacent rooms by room shape and doorslot
 	-- https://wofsauge.github.io/IsaacDocs/rep/enums/RoomShape.html
 
 	-- 1x1
@@ -141,21 +141,22 @@ function MIR:CheckAllRooms()
 	for _,room in ipairs(MinimapAPI:GetLevel()) do
 		local stage = Game():GetLevel():GetStage()
 
-		-- boss room
+		-- add all neighbors if boss room
 		-- is straight up disabled in void (for now) because wacky behavior with delirium's boss room
 		if room.Type == RoomType.ROOM_BOSS and room:IsIconVisible() and stage ~= LevelStage.STAGE7 then
 			for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
 				MIR:AddImpossibleRoom(neighborPos)
 			end
+
 		elseif room:IsVisible() then
-			-- vertical corridor
+			-- add neighbors to the left and right if vertical corridor
 			if room.Shape == RoomShape.ROOMSHAPE_IV or room.Shape == RoomShape.ROOMSHAPE_IIV then
 				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
 					if neighborPos.X ~= room.Position.X then
 						MIR:AddImpossibleRoom(neighborPos)
 					end
 				end
-			-- horizontal corridor
+			-- add neighbors above and below if horizontal corridor
 			elseif room.Shape == RoomShape.ROOMSHAPE_IH or room.Shape == RoomShape.ROOMSHAPE_IIH then
 				for _,neighborPos in ipairs(MIR:GetNeighborVectors(room.Position, room.Shape)) do
 					if neighborPos.Y ~= room.Position.Y then
