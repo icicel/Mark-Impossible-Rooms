@@ -207,5 +207,6 @@ end
 
 if MinimapAPI then
 	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.CheckDoorSlots)
-	MIR:AddCallback(ModCallbacks.MC_POST_UPDATE, MIR.CheckAllRooms)
+	MIR:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, MIR.CheckAllRooms)
+	MIR:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, MIR.CheckAllRooms)
 end
