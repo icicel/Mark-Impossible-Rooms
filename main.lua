@@ -83,6 +83,10 @@ MIR.DoorTable = {
 
 function MIR:CheckDoorSlots()
 	local room = MinimapAPI:GetCurrentRoom()
+	if room == nil then
+		return
+	end
+
 	local pos = room.Position -- vector
 	local shape = room.Shape
 	local validDoors = room.Descriptor.Data.Doors -- bitmap of what entrances are valid
